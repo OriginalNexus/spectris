@@ -1,10 +1,15 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
 #include <GL/glew.h>
 #include <GL/glut.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include "../include/utility.h"
+
+#define VECTOR_IMPLEMENTATION
+#include "../include/vector.h"
+#define MOTION_IMPLEMENTATION
 #include "../include/motion.h"
+#include "../include/utility.h"
 #include "../include/bass.h"
 
 // C does not support boolean
@@ -18,10 +23,12 @@ GLfloat lightDiffuse[] = {0.8, 0.8, 0.8, 1};
 GLfloat lightSpecular[] = {0.4, 0.4, 0.4, 1};
 
 int soundStream = 0;
+int skipToDrop = false;
+int dropPos = 95;
 
 // This will draw a 100 by 100 plane, the camera being always in the middle of it. Gives the impression of an infinite world
 void drawGround() {
-	int centerX = (int) motGetEyePos().x, centerY = (int) motGetEyePos().z;
+	int centerX = (int) mot_GetEyePos().x, centerY = (int) mot_GetEyePos().z;
 	int i, j;
 	glEnable(GL_TEXTURE_2D);
 	glPushMatrix();
@@ -46,30 +53,90 @@ void drawGround() {
 }
 
 void drawSpectrum(void) {
-	// Spectrum buffer
-	GLfloat buff[1024];
-	// Get the buffer
-	BASS_ChannelGetData(soundStream, &buff, BASS_DATA_FFT2048 | BASS_DATA_FFT_REMOVEDC | BASS_DATA_FLOAT);
+	// FFT size (2 ^ n)
+	int n = 10;
+	// Number of bands
+	int bandNum = 32;
 
-	// Spits the buffer in 32 bands and computes the average for each one
+	// Get FFT
+	int N = (int)pow(2, n);
+	float fft[N];
+	if (BASS_ChannelGetData(soundStream, &fft, BASS_DATA_FFT2048) == -1) return;
+
+	// Spits the buffer in bandNum bands and computes the magnitude for each one
 	int i, j;
-	GLdouble med;
-	for (i = 0; i < 32; i++) {
-		med = 0;
-		for (j = 0; j < 14; j++) {
-				med += buff[64 + i * 14 + j]; // Ignores the firt 64 and the last 512 (they are either too loud or silent)
-		}
-		// Average
-		med /= 14;
+	for (i = 0; i < bandNum; i++) {
+		float peak = 0;
+		int p1 = (int)pow(2, i * n / (float)(bandNum - 1));
+		if (p1 > N - 1) p1 = N - 1;
+		if (p1 <= 0) p1 = 1;
 
-		// Draws a Line
+		int p0 = (int)pow(2, (i - 1) * n / (float)(bandNum - 1));
+		if (p0 > N - 1) p0 = N - 1;
+		if (p0 < 0) p0 = 0;
+
+		for (j = p0; j < p1; j++)
+		{
+		    if (peak < fft[j + 1]) peak = fft[j + 1];
+		}
+	
+		// Draw band
+		float scale = sqrt(peak) * 30;
+		float width = 0.5;
+		float spacing = 0.5;
+
 		glPushMatrix();
-			glTranslatef(0, sqrt(med) * 100 * 0.25, i);
-			glScalef(1, sqrt(med) * 100, 1);
+			glTranslatef(0, scale * width / 2, i * (width + spacing));
+			glScalef(1, scale, 1);
 			glColor3f(0, 0.2, 1);
-			glutSolidCube(0.5);
+			glutSolidCube(width);
 		glPopMatrix();
 	}
+
+
+	// // Failed attempt 2
+	// for (i = 0; i < bandNum; i++) {
+	// 	float peak = 0;
+	// 	int p = (int)pow(2, i * 10.0 / (bandNum - 1));
+	// 	if (p > 1023) p = 1023;
+	// 	if (p <= 0) p = 1;
+	// 	for (j = 0; j < p; j++)
+	// 	{
+	// 	    if (peak < fft[j + 1]) peak = fft[j + 1];
+	// 	}
+	// 	float y = sqrt(peak);
+	
+	// 	// Draw band
+	// 	float scale = y * 30;
+	// 	glPushMatrix();
+	// 		glTranslatef(0, scale * 0.25, i);
+	// 		glScalef(1, scale, 1);
+	// 		glColor3f(0, 0.2, 1);
+	// 		glutSolidCube(0.5);
+	// 	glPopMatrix();
+	// }
+
+
+	// // Failed attempt 1
+	// GLdouble mag;
+	// for (i = 0; i < bandNum; i++) {
+	// 	mag = 0;
+	// 	for (j = 0; j < N / bandNum; j++) {
+	// 			mag += fft[i * (N / bandNum) + j + 1];
+	// 	}
+	// 	// Average
+	// 	mag /= N / bandNum;
+
+	// 	// Draw band
+
+	// 	float scaleCoef = 0.05 * (-20) * log10(mag);
+	// 	glPushMatrix();
+	// 		glTranslatef(0, scaleCoef * 0.25, i);
+	// 		glScalef(1, scaleCoef, 1);
+	// 		glColor3f(0, 0.2, 1);
+	// 		glutSolidCube(0.5);
+	// 	glPopMatrix();
+	// }
 
 	// Reset color
 	glColor3f(0.5, 0.5, 0.5);
@@ -82,12 +149,13 @@ void display(void)
 	// Load the identity matrix, clear all the previous transformations
 	glLoadIdentity();
 	// Set up the camera
-	motMoveCamera();
+	mot_MoveCamera();
+	mot_SetCamera();
 	// Set light position
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
 
 	// Draws ground
-	drawGround();
+	// drawGround();
 
 	// Draw spectrum
 	drawSpectrum();
@@ -160,7 +228,9 @@ void bass(void) {
 	BASS_ChannelSetSync(soundStream, BASS_SYNC_MIXTIME | BASS_SYNC_END, 0, replayMusic, 0);
 	// Plays the stream
 	BASS_ChannelPlay(soundStream, TRUE);
-	//BASS_ChannelSetPosition(soundStream, BASS_ChannelSeconds2Bytes(soundStream, 95), BASS_POS_BYTE);
+	if (skipToDrop) {
+		BASS_ChannelSetPosition(soundStream, BASS_ChannelSeconds2Bytes(soundStream, dropPos), BASS_POS_BYTE);	
+	}
 }
 
 
@@ -172,14 +242,14 @@ int main(int argc, char *argv[])
 	glutInitWindowSize(800, 600);
 	glutCreateWindow("Spectris");
 	glewInit();
-	motionInit();
 
 	// Event listeners
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	
 	initialize();
-
+	mot_Init(1.0 / 80);
+	mot_TeleportCamera(-20, mot_GetConstant(MOT_EYE_HEIGHT), 15);
 	bass();
 
 	// Starts main timer
