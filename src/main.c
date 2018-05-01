@@ -61,7 +61,7 @@ void drawSpectrum(void) {
 	// Get FFT
 	int N = (int)pow(2, n);
 	float fft[N];
-	if (BASS_ChannelGetData(soundStream, &fft, BASS_DATA_FFT2048) == -1) return;
+	if (BASS_ChannelGetData(soundStream, &fft, BASS_DATA_FFT8192) == -1) return;
 
 	// Spits the buffer in bandNum bands and computes the magnitude for each one
 	int i, j;
@@ -79,7 +79,7 @@ void drawSpectrum(void) {
 		{
 		    if (peak < fft[j + 1]) peak = fft[j + 1];
 		}
-	
+
 		// Draw band
 		float scale = sqrt(peak) * 30;
 		float width = 0.5;
@@ -105,7 +105,7 @@ void drawSpectrum(void) {
 	// 	    if (peak < fft[j + 1]) peak = fft[j + 1];
 	// 	}
 	// 	float y = sqrt(peak);
-	
+
 	// 	// Draw band
 	// 	float scale = y * 30;
 	// 	glPushMatrix();
@@ -186,7 +186,7 @@ void initialize(void)
 	glEnable(GL_DEPTH_TEST);
 	// Disable color material
 	glEnable(GL_COLOR_MATERIAL);
-	// Enable normalize 
+	// Enable normalize
 	glEnable(GL_NORMALIZE);
 	// Enable Blend and transparency
 	glEnable(GL_BLEND);
@@ -205,7 +205,7 @@ void initialize(void)
 }
 
 void tick(int value)
-{	
+{
 	// Calls the display() function
 	glutPostRedisplay();
 
@@ -229,7 +229,7 @@ void bass(void) {
 	// Plays the stream
 	BASS_ChannelPlay(soundStream, TRUE);
 	if (skipToDrop) {
-		BASS_ChannelSetPosition(soundStream, BASS_ChannelSeconds2Bytes(soundStream, dropPos), BASS_POS_BYTE);	
+		BASS_ChannelSetPosition(soundStream, BASS_ChannelSeconds2Bytes(soundStream, dropPos), BASS_POS_BYTE);
 	}
 }
 
@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 	// Event listeners
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
-	
+
 	initialize();
 	mot_Init(1.0 / 80);
 	mot_TeleportCamera(-20, mot_GetConstant(MOT_EYE_HEIGHT), 15);

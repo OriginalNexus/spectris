@@ -1,5 +1,5 @@
 /*
-	motion library 
+	motion library
 	Realistic camera movement for OpenGL
 	Copyright (c) 2014 Neacsu Razvan
 
