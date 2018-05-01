@@ -54,9 +54,9 @@ void drawGround() {
 
 void drawSpectrum(void) {
 	// FFT size (2 ^ n)
-	int n = 10;
+	int n = 12;
 	// Number of bands
-	int bandNum = 32;
+	int bandNum = 1024;
 
 	// Get FFT
 	int N = (int)pow(2, n);
@@ -67,23 +67,23 @@ void drawSpectrum(void) {
 	int i, j;
 	for (i = 0; i < bandNum; i++) {
 		float peak = 0;
-		int p1 = (int)pow(2, i * n / (float)(bandNum - 1));
+		int p1 = (i + 1) * (N / (float)bandNum);
 		if (p1 > N - 1) p1 = N - 1;
 		if (p1 <= 0) p1 = 1;
 
-		int p0 = (int)pow(2, (i - 1) * n / (float)(bandNum - 1));
+		int p0 = i * (N / (float)bandNum);
 		if (p0 > N - 1) p0 = N - 1;
 		if (p0 < 0) p0 = 0;
 
 		for (j = p0; j < p1; j++)
 		{
-		    if (peak < fft[j + 1]) peak = fft[j + 1];
+			peak += fft[j];
 		}
 
 		// Draw band
-		float scale = sqrt(peak) * 30;
-		float width = 0.5;
-		float spacing = 0.5;
+		float scale = sqrt(peak) * 500;
+		float spacing = 0;
+		float width = 32.0 / bandNum - spacing;
 
 		glPushMatrix();
 			glTranslatef(0, scale * width / 2, i * (width + spacing));
@@ -93,6 +93,35 @@ void drawSpectrum(void) {
 		glPopMatrix();
 	}
 
+	// // Failed attempt 3
+	// int i, j;
+	// for (i = 0; i < bandNum; i++) {
+	// 	float peak = 0;
+	// 	int p1 = (int)pow(2, i * n / (float)(bandNum - 1));
+	// 	if (p1 > N - 1) p1 = N - 1;
+	// 	if (p1 <= 0) p1 = 1;
+	//
+	// 	int p0 = (int)pow(2, (i - 1) * n / (float)(bandNum - 1));
+	// 	if (p0 > N - 1) p0 = N - 1;
+	// 	if (p0 < 0) p0 = 0;
+	//
+	// 	for (j = p0; j < p1; j++)
+	// 	{
+	// 	    if (peak < fft[j + 1]) peak = fft[j + 1];
+	// 	}
+	//
+	// 	// Draw band
+	// 	float scale = sqrt(peak) * 800;
+	// 	float spacing = 0;
+	// 	float width = 32.0 / bandNum - spacing;
+	//
+	// 	glPushMatrix();
+	// 		glTranslatef(0, scale * width / 2, i * (width + spacing));
+	// 		glScalef(1, scale, 1);
+	// 		glColor3f(0, 0.2, 1);
+	// 		glutSolidCube(width);
+	// 	glPopMatrix();
+	// }
 
 	// // Failed attempt 2
 	// for (i = 0; i < bandNum; i++) {

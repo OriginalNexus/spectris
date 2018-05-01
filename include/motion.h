@@ -409,8 +409,10 @@ static void motp_freeCameraHandler(int x, int y)
 	GLint v[4];
 	glGetIntegerv(GL_VIEWPORT, v); // Gets 4 values: X, Y position of window, Width and Heigth of viewport
 	// Determines the angle on each axis based on mouse position
-	motp_cameraYaw += -45 + 90 * x / (GLdouble)v[2];
-	motp_cameraPitch += -30 + 60 * y / (GLdouble)v[3];
+	if (x != v[2] / 2)
+		motp_cameraYaw += -45 + 90 * x / (GLdouble)v[2];
+	if (y != v[3] / 2)
+		motp_cameraPitch += -30 + 60 * y / (GLdouble)v[3];
 
 	// cameraYaw must not exeed 360 or be below -360 degrees
 	motp_cameraYaw -= ((int)motp_cameraYaw / 360) * 360;
